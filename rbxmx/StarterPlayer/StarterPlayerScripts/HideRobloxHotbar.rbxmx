@@ -1,0 +1,64 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<Meta name="ExplicitAutoJoints">true</Meta>
+	<External>null</External>
+	<External>nil</External>
+	<Item class="LocalScript" referent="RBXBB10F0A1EB0E4C939C0D5AE865A0359E">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<bool name="Disabled">false</bool>
+			<Content name="LinkedSource"><null></null></Content>
+			<string name="Name">HideRobloxHotbar</string>
+			<token name="RunContext">0</token>
+			<string name="ScriptGuid">{89CF32E9-BBD5-4AAF-9891-3078BA44E7EE}</string>
+			<ProtectedString name="Source"><![CDATA[-- Version 1.0
+-- HideRobloxHotbar: Roblox 기본 Backpack UI/핫키 차단 + 우리 커스텀 핫바만 사용
+-- 초보 설명:
+--  - SetCoreGuiEnabled(Backpack,false)로 기본 핫바 UI를 숨깁니다.
+--  - ContextActionService로 숫자키(1~8,0)를 '먹어서' 도구 자동장착을 막습니다.
+
+local StarterGui = game:GetService("StarterGui")
+local ContextActionService = game:GetService("ContextActionService")
+local Players = game:GetService("Players")
+
+local LOCAL = Players.LocalPlayer
+
+-- 1) 기본 핫바 UI 숨김
+local function hideCoreGui()
+	pcall(function()
+		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+	end)
+end
+
+-- 2) 숫자키 장착 차단 (우선순위 높게)
+local BLOCK_ACTION = "BlockToolHotkeys"
+local KEYS = {
+	Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four,
+	Enum.KeyCode.Five, Enum.KeyCode.Six, Enum.KeyCode.Seven, Enum.KeyCode.Eight,
+	Enum.KeyCode.Zero, -- (원한다면 Nine도 추가)
+}
+local function blockToolHotkeys()
+	ContextActionService:UnbindAction(BLOCK_ACTION)
+	ContextActionService:BindActionAtPriority(
+		BLOCK_ACTION,
+		function() return Enum.ContextActionResult.Sink end,
+		false,
+		10_000, -- 높은 우선순위로 CoreScript보다 먼저 잡아먹기
+		table.unpack(KEYS)
+	)
+end
+
+-- 초기/리스폰 시 재적용
+hideCoreGui()
+blockToolHotkeys()
+LOCAL.CharacterAdded:Connect(function()
+	task.defer(hideCoreGui)
+	task.defer(blockToolHotkeys)
+end)
+]]></ProtectedString>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+		</Properties>
+	</Item>
+</roblox>
