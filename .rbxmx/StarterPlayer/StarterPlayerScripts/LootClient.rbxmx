@@ -1,0 +1,93 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<Meta name="ExplicitAutoJoints">true</Meta>
+	<External>null</External>
+	<External>nil</External>
+	<Item class="LocalScript" referent="RBX8F94DE4A84974AAAA62CFC967AE84717">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<bool name="Disabled">false</bool>
+			<Content name="LinkedSource"><null></null></Content>
+			<string name="Name">LootClient</string>
+			<token name="RunContext">0</token>
+			<string name="ScriptGuid">{ED4223E0-BA6F-4C32-8311-10FDD7D7A3E8}</string>
+			<ProtectedString name="Source"><![CDATA[-- Version 1.0
+-- LootClient: 서버가 보내는 획득(Picked) 신호를 받아 화면에 아이콘+텍스트를 띄움
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+
+local rem = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Loot"):WaitForChild("Picked")
+local ItemIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ItemIcons"))
+
+local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- 한 번 만들어 두는 루트 GUI
+local screen = Instance.new("ScreenGui")
+screen.Name = "LootHud"
+screen.IgnoreGuiInset = true
+screen.ResetOnSpawn = false
+screen.Parent = playerGui
+
+local function showPickup(id: string, qty: number)
+	qty = tonumber(qty) or 1
+	local frame = Instance.new("Frame")
+	frame.BackgroundTransparency = 1
+	frame.Size = UDim2.fromOffset(220, 56)
+	frame.Position = UDim2.fromScale(0.5, 0.82)
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.Parent = screen
+	frame.ZIndex = 50
+
+	local img = Instance.new("ImageLabel")
+	img.BackgroundTransparency = 1
+	img.Size = UDim2.fromOffset(44, 44)
+	img.Position = UDim2.fromOffset(0, 6)
+	img.Image = ItemIcons[id] or ""
+	img.Parent = frame
+	img.ZIndex = 51
+
+	local txt = Instance.new("TextLabel")
+	txt.BackgroundTransparency = 1
+	txt.Text = string.format("+%d %s", qty, id)
+	txt.Font = Enum.Font.GothamBold
+	txt.TextSize = 22
+	txt.TextColor3 = Color3.fromRGB(235,235,235)
+	txt.TextStrokeTransparency = 0.4
+	txt.Size = UDim2.fromOffset(160, 56)
+	txt.Position = UDim2.fromOffset(56, 0)
+	txt.TextXAlignment = Enum.TextXAlignment.Left
+	txt.Parent = frame
+	txt.ZIndex = 51
+
+	-- 트윈: 위로 살짝 이동하며 페이드
+	local t1 = TweenService:Create(frame, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.fromScale(0.5, 0.79)})
+	local t2 = TweenService:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.fromScale(0.5, 0.74)})
+	local t3 = TweenService:Create(txt, TweenInfo.new(0.25), {TextTransparency = 0.0})
+	local f3 = TweenService:Create(frame, TweenInfo.new(0.25), {BackgroundTransparency = 1})
+
+	t1:Play(); t3:Play()
+	t1.Completed:Wait()
+	t2:Play()
+	t2.Completed:Wait()
+
+	-- 사라짐
+	local fadeTxt = TweenService:Create(txt, TweenInfo.new(0.25), {TextTransparency = 1})
+	local fadeImg = TweenService:Create(img, TweenInfo.new(0.25), {ImageTransparency = 1})
+	fadeTxt:Play(); fadeImg:Play()
+	fadeImg.Completed:Wait()
+	frame:Destroy()
+end
+
+rem.OnClientEvent:Connect(function(payload)
+	if typeof(payload) ~= "table" then return end
+	showPickup(payload.id, payload.qty)
+end)
+]]></ProtectedString>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+		</Properties>
+	</Item>
+</roblox>

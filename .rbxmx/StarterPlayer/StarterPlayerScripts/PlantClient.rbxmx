@@ -1,0 +1,108 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<Meta name="ExplicitAutoJoints">true</Meta>
+	<External>null</External>
+	<External>nil</External>
+	<Item class="LocalScript" referent="RBXC798212B1AE74B9A90D7A08281ABC215">
+		<Properties>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<bool name="Disabled">false</bool>
+			<Content name="LinkedSource"><null></null></Content>
+			<string name="Name">PlantClient</string>
+			<token name="RunContext">0</token>
+			<string name="ScriptGuid">{043AC69D-D215-4289-96AF-A926BC98DD38}</string>
+			<ProtectedString name="Source"><![CDATA[-- Version v1.1.1
+--[[
+  역할: 플레이어가 TomatoSeed(씨앗) 툴을 "장착"한 상태에서
+       밭의 Base(PrimaryPart)를 "클릭"하면 서버에 심기 요청(RemoteEvent)을 보냅니다.
+
+  왜 로컬에서 마우스를 읽나요?
+   - 마우스 Target/Hit 정보는 클라이언트에서만 쉽게 얻을 수 있기 때문입니다.
+   - 단, 최종 검증은 반드시 서버가 수행합니다(치트 방지).
+--]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local PlantRequest = Remotes:WaitForChild("PlantRequest")
+-- HarvestRequest는 3초만 기다리고 없으면 nil 처리(서버 보장 스크립트가 만들도록)
+local HarvestRequest = Remotes:WaitForChild("HarvestRequest", 3) or Remotes:FindFirstChild("HarvestRequest")
+
+
+-- 현재 장착된 씨앗 툴 이름(없으면 nil)
+local equippedSeedToolName: string? = nil
+
+-- 툴 장착/해제 감지
+local function onToolEquipped(tool)
+	-- 씨앗 툴 판단: 내부에 StringValue CropType 존재
+	local cropType = tool:FindFirstChild("CropType")
+	if cropType and cropType:IsA("StringValue") then
+		equippedSeedToolName = tool.Name
+	else
+		equippedSeedToolName = nil
+	end
+end
+
+local function onToolUnequipped(tool)
+	if tool.Name == equippedSeedToolName then
+		equippedSeedToolName = nil
+	end
+end
+
+-- 캐릭터 로드 시 툴 이벤트 연결
+local function hookCharacter(char)
+	-- 현재 들고 있는 툴 체크
+	for _, t in ipairs(char:GetChildren()) do
+		if t:IsA("Tool") then
+			t.Equipped:Connect(function() onToolEquipped(t) end)
+			t.Unequipped:Connect(function() onToolUnequipped(t) end)
+		end
+	end
+	-- 이후 새로 든 툴도 대응
+	char.ChildAdded:Connect(function(obj)
+		if obj:IsA("Tool") then
+			obj.Equipped:Connect(function() onToolEquipped(obj) end)
+			obj.Unequipped:Connect(function() onToolUnequipped(obj) end)
+		end
+	end)
+end
+
+if player.Character then hookCharacter(player.Character) end
+player.CharacterAdded:Connect(hookCharacter)
+
+-- Version 1.2
+--[[
+  변경점:
+   ▪ 클릭 수확(클라→서버 Remote) 제거
+   ▪ 씨앗 장착 시 '밭 클릭=심기'만 처리
+   ▪ 수확은 오직 ProximityPrompt(E, 홀드)로만 수행
+--]]
+mouse.Button1Down:Connect(function()
+	local target = mouse.Target
+	if not target then return end
+
+	-- [심기] 씨앗 툴 장착 상태에서만 처리
+	if not equippedSeedToolName then
+		return -- 수확은 E 프롬프트로만!
+	end
+
+	local plots = workspace:FindFirstChild("Plots")
+	if not plots then return end
+	local plotModel = target:FindFirstAncestorOfClass("Model")
+	if not plotModel or plotModel.Parent ~= plots then return end
+
+	-- 서버: 심기 요청
+	PlantRequest:FireServer(equippedSeedToolName, target, mouse.Hit.Position)
+end)
+]]></ProtectedString>
+			<int64 name="SourceAssetId">-1</int64>
+			<BinaryString name="Tags"></BinaryString>
+		</Properties>
+	</Item>
+</roblox>
